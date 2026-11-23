@@ -3,7 +3,7 @@
 BANA 212 (UC Irvine MSBA), Team 6. An interactive companion to our project notebook: what the equatorial Pacific buoy array
 says about El Niño and La Niña, how early it can call a change, and what an El Niño fall has meant for winter rain in Los Angeles.
 
-**Live app:** the URL is added here after deployment.
+**Live app:** https://bana212-elnino-la-rain.streamlit.app
 
 ## The questions and what we found
 
