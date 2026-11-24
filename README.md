@@ -7,7 +7,8 @@ says about El Niño and La Niña, how early it can call a change, and what an El
 
 ## The questions and what we found
 
-Results were frozen on 22 Nov 2026; every number below comes from `data/summary.json`.
+Results were frozen on 22 Nov 2026 (the flood-risk results on 23 Nov 2026); every number below comes from `data/summary.json`
+and `data/flood_risk.json`.
 
 | Question | Answer |
 |---|---|
@@ -15,6 +16,7 @@ Results were frozen on 22 Nov 2026; every number below comes from `data/summary.
 | **Q2** Which buoy readings signal the phase best, and can they call it earlier than NOAA's index? | Three months ahead, logistic regression on buoy readings plus the latest ONI reaches a balanced accuracy of 0.71 against 0.58 for persistence over 28 walk-forward test years (1999–2026) and catches 73 of 141 phase changes; on the 1995–98 test it scores 0.79 against 0.52. At 0–1 months the latest ONI is hard to beat. |
 | **Q3** After an El Niño fall, how much more likely is a wet Los Angeles winter? | 65% of winters after an El Niño fall (13 of 20) were wetter than the 1950–2025 median, against 45% after other falls (25 of 56), with 5.7 vs 3.75 heavy-rain days (≥ 1 inch) per season. |
 | **Winter 2026–27** | The Aug–Oct 2026 ONI is +2.46, the highest since 1950. In October 2026 the Niño 3.4 buoys read +3.14 °C and the model calls El Niño through April 2027. The odds lean towards a wet, stormy winter: a seasonal risk outlook, not a forecast. |
+| **Flood risk** | A storm-heavy winter (≥ 6 days with ≥ 1 inch of rain) followed 1 of 18 La Niña falls, 12 of 38 neutral, 7 of 16 moderate El Niño and 3 of 4 strong El Niño falls; it becomes more likely than not above a fall ONI of +0.86 (95% interval +0.35 to +2.00), about +0.83 °C on the Niño 3.4 buoys. After El Niño falls, Los Angeles County averaged 6.4 NWS flood-warning days per Oct–Apr against 3.8 (2002–03 to 2025–26), and Downtown LA had 2.7 hours with ≥ 0.5 in of rain per winter against 0.7 (1999–00 to 2023–24). For 2026–27: an 86% chance (56–98%) of a storm-heavy winter. |
 
 ## The app
 
@@ -24,6 +26,7 @@ Results were frozen on 22 Nov 2026; every number below comes from `data/summary.
 | Descriptive Analytics | Buoys reporting per month, ONI since 1950 by phase, El Niño vs La Niña along the equator, Q1 on the new years, LA season rain after El Niño and other falls. |
 | Model Performance | Balanced accuracy by lead time from the frozen results (logistic regression, random forest, persistence; main split and walk-forward), what the final models rely on (logistic coefficients, random-forest importances), and a hyperparameter-tuning section: best settings per model and horizon, the cross-validation table, and tuned vs fixed settings on the held-out tests. |
 | Interactive Prediction | Sliders for the nine model inputs (historical ranges, starting at the latest observed month, October 2026) and the phase probabilities 0, 1, 3 and 6 months ahead from the saved models, with the matching LA wet-winter odds. |
+| Flood Risk | Heavy-rain risk tiers by fall ONI, the tipping point for a storm-heavy winter (with a fall-ONI slider), NWS flood-warning days for Los Angeles County, hours of intense rain at Downtown LA, and what it all means for winter 2026–27. |
 
 The app only loads saved files; it never fits a model.
 
@@ -34,14 +37,15 @@ app.py                            Streamlit app
 requirements.txt                  pinned packages (pandas, numpy, scikit-learn match the notebook run)
 .streamlit/config.toml            theme
 notebooks/
-  elnino_analysis_v3.ipynb        the frozen analysis (sections 1–10), executed 22 Nov 2026
-  elnino_analysis_v4.ipynb        v3 + section 11 (hyperparameter tuning) + section 12 (export for the app); only the title cell differs
+  BANA 212_Team 6_elnino_analysis.ipynb   the full analysis: sections 1–10 frozen 22 Nov 2026, 11 hyperparameter tuning,
+                                          12 export for the app, 13 flood risk
 models/
   logistic_k{0,1,3,6}.joblib      logistic regression per horizon, fixed settings of the report (the app's main model)
   random_forest_k{0,1,3,6}.joblib random forest per horizon, fixed settings of the report
   metadata.json                   feature order, class order, horizons, training window, best settings, CV tables, test scores, versions
 data/
   summary.json                    every number quoted in the project, frozen 22 Nov 2026
+  flood_risk.json                 the flood-risk results of notebook section 13 (tiers, tipping point, warnings, storms, 2026–27)
   model_inputs_monthly.csv        the nine model inputs for every month with ≥ 5 buoys, 1985–2026
   buoys_monthly.csv               buoys reporting SST per month and the Niño 3.4-box buoy anomaly, 1980–2026
   oni_monthly.csv                 ONI and RONI by month since 1950
@@ -78,8 +82,9 @@ pip install -r requirements.txt
 streamlit run app.py
 ```
 
-To rebuild the models, run `notebooks/elnino_analysis_v4.ipynb` top to bottom (Google Colab or Jupyter; the first run downloads
-about 150 MB of raw data into `data/raw/`), then copy `app_export/models/` and `app_export/data/` over `models/` and `data/`.
+To rebuild the models, run `notebooks/BANA 212_Team 6_elnino_analysis.ipynb` top to bottom (Google Colab or Jupyter; the first
+run downloads about 150 MB of raw data into `data/raw/`), then copy `app_export/models/` and `app_export/data/` over `models/`
+and `data/`, and save the `flood_risk` key of the notebook's `summary.json` as `data/flood_risk.json`.
 
 ## Data sources
 
@@ -96,6 +101,11 @@ about 150 MB of raw data into `data/raw/`), then copy `app_export/models/` and `
   <https://www.ncei.noaa.gov/data/global-historical-climatology-network-daily/access/USW00093134.csv>. Menne, M. J., Durre, I.,
   Vose, R. S., Gleason, B. E., & Houston, T. G. (2012). An overview of the Global Historical Climatology Network-Daily database.
   *Journal of Atmospheric and Oceanic Technology*, 29(7), 897–910.
+* **Iowa Environmental Mesonet (IEM), NWS VTEC archive**: every warning and advisory issued for Los Angeles County (CAC037)
+  since 1995: <https://mesonet.agron.iastate.edu/json/vtec_events_byugc.php?ugc=CAC037&sdate=1995-01-01>. The Flash Flood
+  Warning archive is complete from about 2002.
+* **IEM ASOS archive, station CQT** (Los Angeles Downtown/USC), hourly precipitation reports, June 1999 to May 2024:
+  <https://mesonet.agron.iastate.edu/cgi-bin/request/asos.py?station=CQT&data=p01i&report_type=3>.
 
-ONI, RONI and the station file were downloaded on 22 Nov 2026 and the buoy files run to 1 Nov 2026; NOAA revises recent values,
-so a rerun on later downloads can move the newest numbers.
+ONI, RONI and the station file were downloaded on 22 Nov 2026, the warning archive on 23 Nov 2026, and the buoy files run to
+1 Nov 2026; NOAA revises recent values, so a rerun on later downloads can move the newest numbers.

@@ -1,7 +1,8 @@
 """BANA 212 Team 6: El Niño in the TAO buoy record, NOAA's ONI and Los Angeles winter rain.
 
-The app only reads files saved by notebooks/elnino_analysis_v4.ipynb: data/summary.json (results frozen on 22 Nov 2026),
-the small tables in data/, and the scikit-learn pipelines plus metadata.json in models/.
+The app only reads files saved by "notebooks/BANA 212_Team 6_elnino_analysis.ipynb": data/summary.json (results frozen on
+22 Nov 2026), data/flood_risk.json (the flood-risk results of section 13), the small tables in data/, and the scikit-learn
+pipelines plus metadata.json in models/.
 """
 from __future__ import annotations
 
@@ -56,6 +57,7 @@ def load_models() -> dict:
 
 
 S = load_json("data/summary.json")
+FR = load_json("data/flood_risk.json")
 META = load_json("models/metadata.json")
 FEATURES = META["features"]
 FEATURE_NAMES = [f["name"] for f in FEATURES]
@@ -109,14 +111,30 @@ def setting_text(kind: str, p: dict) -> str:
     return f"{p['n_estimators']} trees · max depth {depth} · min leaf {p['min_samples_leaf']}"
 
 
+def kn(block: dict) -> str:
+    return f"{block['k']}/{block['n']}"
+
+
+def ci_text(ci: list) -> str:
+    return f"{pct(ci[0])}–{pct(ci[1])}"
+
+
+def fall_phase(oni: float) -> str:
+    return "El Niño" if oni >= 0.5 else "La Niña" if oni <= -0.5 else "Neutral"
+
+
+def day_label(iso: str) -> str:
+    return f"{pd.Timestamp(iso):%-d %b %Y}"
+
+
 # ------------------------------------------------------------------------------------------------------------- header
 st.markdown('<p class="small-label">BANA 212 · Team 6 · results frozen 22 Nov 2026</p>', unsafe_allow_html=True)
 st.title("El Niño: from Pacific buoys to Los Angeles rain")
 st.caption("Can the equatorial Pacific buoy array tell us early that El Niño is coming, and what does that mean for winter rain in "
            "Los Angeles?")
 
-tab_exec, tab_desc, tab_perf, tab_pred = st.tabs(
-    ["Executive Summary", "Descriptive Analytics", "Model Performance", "Interactive Prediction"])
+tab_exec, tab_desc, tab_perf, tab_pred, tab_flood = st.tabs(
+    ["Executive Summary", "Descriptive Analytics", "Model Performance", "Interactive Prediction", "Flood Risk"])
 
 # ===================================================================================================== Executive Summary
 with tab_exec:
@@ -203,6 +221,12 @@ with tab_exec:
         f"forecast**: {sum(f['wet'] for f in q3['strong_falls'])} of {len(q3['strong_falls'])} strong falls since 1950 "
         "(ONI or RONI ≥ 1.5) brought a wet winter"
         + (f", but {' and '.join(dry_strong)} stayed dry." if dry_strong else "."))
+    fw, fco = FR["winter_2026_27"], FR["warnings"]["comparison_oct_apr"]
+    st.markdown(
+        f"**Flood risk.** At this fall's ONI the chance of a storm-heavy winter (≥ 6 heavy-rain days of ≥ 1 inch) is "
+        f"{pct(fw['logistic_p_storm_heavy']['p'])} (95% interval {ci_text(fw['logistic_p_storm_heavy']['ci95'])}), and after "
+        f"El Niño falls Los Angeles County averaged {fco['el_nino']['mean_days']:.1f} NWS flood-warning days per Oct–Apr against "
+        f"{fco['other']['mean_days']:.1f} after other falls ({FR['warnings']['headline_seasons']}). See the Flood Risk tab.")
 
 # ================================================================================================= Descriptive Analytics
 with tab_desc:
@@ -593,3 +617,316 @@ with tab_pred:
                 f"({pct(strong['ci95'][0])}–{pct(strong['ci95'][1])}).")
     st.caption("These odds come from the rain record, not from the buoy models: the models say which phase is likely, the rain "
                "record says what that phase has meant for LA. A seasonal risk outlook, not a weather forecast.")
+
+# ============================================================================================================ Flood Risk
+with tab_flood:
+    th, wa, hr, fw, src = FR["threshold"], FR["warnings"], FR["storms"]["hourly"], FR["winter_2026_27"], FR["sources"]
+    be, lg, lg3 = th["buoy_equivalent"], th["logit"], th["secondary_heavy3"]
+    co, lp = wa["comparison_oct_apr"], fw["logistic_p_storm_heavy"]
+    tiers = {t: v for t, v in FR["tiers"].items() if t != "All seasons"}
+    all_seasons = FR["tiers"]["All seasons"]
+    wrows = pd.DataFrame(wa["season_rows"])
+    wrows["phase"] = wrows["aso_oni"].map(fall_phase)
+    now = wrows[wrows["in_progress"]].iloc[0]
+    last_full = int(now["season"]) - 1
+    first_full = last_full - th["seasons"] + 1
+    span = f"{first_full}–{str(first_full + 1)[-2:]} to {last_full}–{str(last_full + 1)[-2:]}"
+
+    def p_fit(x, logit: dict):
+        return 1 / (1 + np.exp(-(logit["intercept"] + logit["slope_per_degc"] * x)))
+
+    st.markdown(
+        "A **heavy-rain day** is a day with at least 1 inch of rain at Downtown Los Angeles (USC). A **storm-heavy winter** is "
+        f"a rain season (July–June) with at least 6 of them: {th['hits']} of the {th['seasons']} seasons {span} "
+        f"({pct(th['base_rate'])}). Floods come from single storms rather than from a season's total, so flood preparation "
+        "needs three things the wet-winter odds do not give: how many big storms to plan for, whether the National Weather "
+        "Service (NWS) flood warnings that crews and residents act on become more frequent, and whether the rain falls harder "
+        "within an hour, which is what sets off flash floods and debris flows. Falls are grouped by the Aug–Oct ONI, as in the "
+        "other tabs.")
+    c1, c2, c3, c4 = st.columns(4)
+    c1.metric(f"Storm-heavy chance, {now['winter']}", pct(lp["p"]), f"95% interval {ci_text(lp['ci95'])}",
+              delta_color="off", delta_arrow="off", border=True)
+    c2.metric("Tipping point, fall ONI", f"{th['oni_p50']:+.2f}",
+              f"≈ {be['oni_p50_as_buoy_anom_c']:+.2f} °C buoy anomaly", delta_color="off", delta_arrow="off",
+              border=True)
+    c3.metric("Flood-warning days per Oct–Apr", f"{co['el_nino']['mean_days']:.1f} vs {co['other']['mean_days']:.1f}",
+              "El Niño vs other falls", delta_color="off", delta_arrow="off", border=True)
+    c4.metric("Downpour hours per winter", f"{hr['el_nino']['mean_intense_hours']:.1f} vs {hr['other']['mean_intense_hours']:.1f}",
+              "El Niño vs other falls", delta_color="off", delta_arrow="off", border=True)
+
+    st.subheader("1 · Risk tiers by fall (Aug–Oct) ONI")
+    measures = [("p_heavy2", "≥ 2 heavy-rain days", RAIN), ("p_heavy3", "≥ 3 heavy-rain days", BLUE),
+                ("p_heavy6", "≥ 6 heavy-rain days (storm-heavy)", WARM), ("p_major_storm", "≥ 1 storm of 3 in or more", AMBER)]
+    fig = go.Figure()
+    for key, label, color in measures:
+        b = [v[key] for v in tiers.values()]
+        fig.add_bar(x=[f"{t}<br>n = {v['n']}" for t, v in tiers.items()], y=[x["share"] for x in b], name=label,
+                    marker_color=color, marker_line_width=0, text=[kn(x) for x in b], textposition="inside",
+                    insidetextanchor="start", textangle=0, textfont=dict(family=MONO, size=11, color=INK if color == RAIN else "white"),
+                    error_y=dict(type="data", symmetric=False, color=MUTED, thickness=1, width=4,
+                                 array=[x["ci95"][1] - x["share"] for x in b], arrayminus=[x["share"] - x["ci95"][0] for x in b]),
+                    customdata=np.stack([list(tiers), [ci_text(x["ci95"]) for x in b]], axis=1),
+                    hovertemplate="%{customdata[0]}: %{y:.0%} (%{text}), 95% interval %{customdata[1]}<extra>" + label + "</extra>")
+    fig.add_hline(y=all_seasons["p_heavy6"]["share"], line_dash="dash", line_color=WARM, line_width=1)
+    fig.add_scatter(x=[None], y=[None], mode="lines", line=dict(color=WARM, width=1, dash="dash"),
+                    name=f"All seasons: {pct(all_seasons['p_heavy6']['share'])} storm-heavy")
+    fig.update_layout(barmode="group", bargap=0.18, yaxis=dict(range=[0, 1.05], tickformat=".0%", title_text="Share of seasons"))
+    show(style(fig, 400))
+    trows = []
+    for t, v in FR["tiers"].items():
+        row = {"Fall tier": t, "Seasons": v["n"], "Mean heavy-rain days": v["heavy_mean"]}
+        row.update({label: f"{pct(v[key]['share'])} ({kn(v[key])}) · {ci_text(v[key]['ci95'])}" for key, label, _ in measures})
+        trows.append(row)
+    st.dataframe(pd.DataFrame(trows), hide_index=True, width="stretch",
+                 column_config={"Mean heavy-rain days": st.column_config.NumberColumn(format="%.2f")})
+    st.caption(f"Rain seasons {span}, Los Angeles Downtown (USC). Each cell: share of seasons (seasons that reached the level / "
+               "seasons in the tier) · 95% Wilson interval (error bars in the chart). A storm is a run of consecutive days with "
+               "at least 0.10 in each; its size is the total over the run.")
+
+    st.subheader("2 · Tipping point: when a storm-heavy winter becomes more likely than not")
+    lo50, hi50 = th["oni_p50_ci95"]
+    c1, c2 = st.columns([1, 2])
+    with c1:
+        oni_in = st.slider("Fall (Aug–Oct) ONI, °C", -2.0, 3.0, float(fw["aso_oni"]), step=0.01, key="fr_oni",
+                           help=f"Starts at this fall's ONI, {fw['aso_oni']:+.2f}.")
+        p_in = float(p_fit(oni_in, lg))
+        boot = th["p_at_oni"].get(f"{oni_in:.2f}")
+        st.metric("Chance of a storm-heavy winter", pct(p_in),
+                  f"95% bootstrap interval {ci_text(boot['ci95'])}" if boot else "logistic fit; intervals at the marked points",
+                  delta_color="off", delta_arrow="off", border=True)
+        st.markdown(
+            f"The curve crosses 50% at a fall ONI of **{th['oni_p50']:+.2f}** (95% interval {lo50:+.2f} to {hi50:+.2f}). In "
+            f"buoy terms that is an Aug–Oct Niño 3.4 anomaly of about **{be['oni_p50_as_buoy_anom_c']:+.2f} °C** "
+            f"({be['ci95_c'][0]:+.2f} to {be['ci95_c'][1]:+.2f} °C); this Aug–Oct the buoys read "
+            f"{be['aso_2026_buoy_anom_c']:+.2f} °C.")
+    xs = np.linspace(-2, 3, 201)
+    pts = th["p_at_oni"]
+    fig = go.Figure()
+    fig.add_vrect(x0=lo50, x1=hi50, fillcolor=GREY, opacity=0.25, line_width=0, annotation_text="95% interval of the tipping point",
+                  annotation_position="top left", annotation_font=dict(size=11, color=MUTED))
+    fig.add_scatter(x=xs, y=p_fit(xs, lg3["logit"]), mode="lines", name="≥ 3 heavy-rain days, for comparison",
+                    line=dict(color=BLUE, width=2, dash="dash"), hovertemplate="ONI %{x:+.2f}: %{y:.0%}<extra>≥ 3 days</extra>")
+    fig.add_scatter(x=xs, y=p_fit(xs, lg), mode="lines", name="≥ 6 heavy-rain days (storm-heavy)", line=dict(color=WARM, width=3),
+                    hovertemplate="ONI %{x:+.2f}: %{y:.0%}<extra>storm-heavy</extra>")
+    fig.add_scatter(x=[float(k) for k in pts], y=[v["p"] for v in pts.values()], mode="markers",
+                    name="95% season-bootstrap interval", marker=dict(color=WARM, size=8),
+                    error_y=dict(type="data", symmetric=False, color=WARM, thickness=1.5, width=5,
+                                 array=[v["ci95"][1] - v["p"] for v in pts.values()],
+                                 arrayminus=[v["p"] - v["ci95"][0] for v in pts.values()]),
+                    customdata=[ci_text(v["ci95"]) for v in pts.values()],
+                    hovertemplate="ONI %{x:+.2f}: %{y:.0%}, 95% interval %{customdata}<extra></extra>")
+    fig.add_hline(y=0.5, line_dash="dot", line_color=INK, line_width=1)
+    fig.add_vline(x=th["oni_p50"], line_color=INK, line_width=1.5,
+                  annotation_text=f"50% at ONI {th['oni_p50']:+.2f} (≈ {be['oni_p50_as_buoy_anom_c']:+.2f} °C buoy)",
+                  annotation_position="bottom right", annotation_font=dict(size=11, color=INK))
+    fig.add_scatter(x=[oni_in], y=[p_in], mode="markers", name=f"Your input: ONI {oni_in:+.2f}",
+                    marker=dict(color=INK, size=13, symbol="diamond", line=dict(color="white", width=1.5)),
+                    hovertemplate="ONI %{x:+.2f}: %{y:.0%}<extra>your input</extra>")
+    fig.update_layout(xaxis=dict(range=[-2, 3], title_text="Fall (Aug–Oct) ONI (°C)"),
+                      yaxis=dict(range=[0, 1], tickformat=".0%", title_text="Probability"))
+    with c2:
+        show(style(fig, 400))
+    h3 = all_seasons["p_heavy3"]
+    st.markdown(
+        f"**At least 3 heavy-rain days is already normal**: {h3['k']} of {h3['n']} winters ({pct(h3['share'])}) had that many, "
+        f"whatever the fall, so that outcome has no tipping point. Its dashed curve is above 50% for any fall ONI above "
+        f"{lg3['oni_p50']:+.2f}, and the bootstrap cannot pin down where it would cross. The storm-heavy curve is a logistic "
+        f"regression on all {th['seasons']} seasons ({th['hits']} storm-heavy): P = 1 / (1 + exp(−(a + b × ONI))) with "
+        f"a = {lg['intercept']:.3f} and b = {lg['slope_per_degc']:.3f} per °C.")
+    st.caption("Intervals: the fit repeated on bootstrap redraws of the seasons (drawn with replacement), keeping the middle 95% "
+               "of the results; they exist at the marked ONI values. Buoy equivalent: straight line between the Aug–Oct ONI and "
+               "the Aug–Oct Niño 3.4 buoy "
+               f"anomaly over {be['years']} years {be['first_year']}–{be['last_year']} (r = {be['r']:.3f}; no full Aug–Oct in "
+               f"{', '.join(str(y) for y in be['years_missing'])}).")
+
+    st.subheader("3 · NWS flood warnings for Los Angeles County")
+    st.markdown(
+        "A **flood-warning day** is a date (Pacific time) on which at least one NWS Flash Flood Warning or Flood Warning was in "
+        "effect for Los Angeles County. The headline count uses Oct–Apr, the months when Pacific storms arrive, and the winters "
+        f"{wa['headline_seasons']}, the years for which the warning archive is complete.")
+    en, ot, sp = co["el_nino"], co["other"], co["spearman_heavy_days"]
+    c1, c2, c3 = st.columns(3)
+    c1.metric("Warning days per Oct–Apr", f"{en['mean_days']:.1f} vs {ot['mean_days']:.1f}",
+              f"El Niño vs other falls · n = {en['n']}, {ot['n']} · ×{co['ratio_of_means']:.1f}",
+              delta_color="off", delta_arrow="off", border=True)
+    c2.metric("Winters with 2+ warning days", f"{pct(en['ge2_days']['share'])} vs {pct(ot['ge2_days']['share'])}",
+              f"{kn(en['ge2_days'])} vs {kn(ot['ge2_days'])}", delta_color="off", delta_arrow="off", border=True)
+    c3.metric("Spearman r, heavy-rain days vs warning days", f"{sp['r']:.2f}", f"p = {sp['p']:.3f}, {sp['n']} winters",
+              delta_color="off", delta_arrow="off", border=True)
+    fig = go.Figure()
+    partial = wrows.index[wrows["partial_archive"]]
+    if len(partial):
+        fig.add_vrect(x0=-0.5, x1=partial.max() + 0.5, fillcolor=GREY, opacity=0.2, line_width=0,
+                      annotation_text="partial warning archive", annotation_position="top left",
+                      annotation_font=dict(size=11, color=MUTED))
+    for p in PHASES:
+        sub = wrows[wrows["phase"] == p]
+        fig.add_bar(x=sub.index, y=sub["warning_days_oct_apr"], name=f"{p} fall", width=0.8,
+                    marker=dict(color=PHASE_COLORS[p], line=dict(color=INK, width=0.5),
+                                opacity=[0.45 if pa or ip else 1.0 for pa, ip in zip(sub["partial_archive"], sub["in_progress"])],
+                                pattern=dict(shape=["/" if b else "" for b in sub["burn_scar"].notna()], fgcolor=INK,
+                                             solidity=0.25)),
+                    customdata=np.stack([sub["winter"], sub["aso_oni"].map("{:+.2f}".format), sub["warning_days_jul_jun"],
+                                         sub["flash_flood_warnings"],
+                                         sub["heavy_days"].map(lambda v: "n/a" if pd.isna(v) else f"{v:.0f}"),
+                                         sub["burn_scar"].fillna("none")], axis=1),
+                    hovertemplate="%{customdata[0]} (fall ONI %{customdata[1]}): %{y} Oct–Apr warning days, %{customdata[2]} "
+                                  "Jul–Jun · %{customdata[3]} Flash Flood Warnings · %{customdata[4]} heavy-rain days · "
+                                  "burn scar: %{customdata[5]}<extra></extra>")
+    fig.add_scatter(x=wrows.index, y=wrows["warning_days_jul_jun"], mode="markers", name="Full July–June season",
+                    marker=dict(symbol="line-ew", size=16, line=dict(color=INK, width=2.5)),
+                    hovertemplate="%{y} warning days July–June<extra></extra>")
+    fig.add_annotation(x=now.name, y=max(now["warning_days_oct_apr"], now["warning_days_jul_jun"]), xanchor="left", xshift=14,
+                       showarrow=False, text=f"so far,<br>to {pd.Timestamp(fw['so_far_warnings']['through']):%-d %b}",
+                       align="left", font=dict(size=10, color=MUTED))
+    fig.update_layout(barmode="overlay", bargap=0.2, yaxis_title="Days with a flood warning in effect",
+                      xaxis=dict(tickvals=list(wrows.index), ticktext=list(wrows["winter"]), tickangle=-45,
+                                 range=[-0.6, len(wrows) + 0.9]))
+    show(style(fig, 400))
+    st.caption("Bars: Oct–Apr warning days, coloured by the fall (Aug–Oct) ONI phase. Hatched: burn-scar winter "
+               f"({'; '.join(f'{k}: {v}' for k, v in wa['burn_scar_seasons'].items())}). Pale: partial warning archive (shaded) "
+               f"or the season so far ({now['winter']}). Dashes: warning days over the full July–June season.")
+
+    c1, c2 = st.columns([1, 1.3])
+    c1.markdown(f'<p class="small-label">Heavy-rain days vs warning days · Spearman r = {sp["r"]:.2f} (p = {sp["p"]:.3f}), '
+                f'{sp["n"]} winters</p>', unsafe_allow_html=True)
+    head = wrows[~wrows["partial_archive"] & ~wrows["in_progress"]]
+    fig = go.Figure()
+    for p in PHASES:
+        sub = head[head["phase"] == p]
+        fig.add_scatter(x=sub["heavy_days"], y=sub["warning_days_oct_apr"], mode="markers", name=f"{p} fall",
+                        marker=dict(color=PHASE_COLORS[p], size=11, line=dict(color=INK, width=0.5)),
+                        customdata=np.stack([sub["winter"], sub["burn_scar"].fillna("")], axis=1),
+                        hovertemplate="%{customdata[0]}: %{x} heavy-rain days, %{y} warning days %{customdata[1]}<extra></extra>")
+    fig.update_layout(xaxis_title="Heavy-rain days (≥ 1 in) at Downtown LA, season",
+                      yaxis_title="Flood-warning days, Oct–Apr")
+    with c1:
+        show(style(fig, 380))
+    comparisons = [(f"Oct–Apr, {wa['headline_seasons']} (headline)", "comparison_oct_apr"),
+                   (f"Full July–June seasons, {wa['headline_seasons']}", "comparison_jul_jun"),
+                   (f"Oct–Apr from {wrows['winter'].iloc[0]}, partial archive included", "sensitivity_1995_on_oct_apr"),
+                   ("Oct–Apr without the burn-scar winters", "sensitivity_no_burn_scar_oct_apr")]
+    ctable = pd.DataFrame([{
+        "Comparison": label,
+        "El Niño falls: days per winter": f"{b['el_nino']['mean_days']:.1f} (n = {b['el_nino']['n']})",
+        "Other falls: days per winter": f"{b['other']['mean_days']:.1f} (n = {b['other']['n']})",
+        "2+ days, El Niño falls": f"{pct(b['el_nino']['ge2_days']['share'])} ({kn(b['el_nino']['ge2_days'])})",
+        "2+ days, other falls": f"{pct(b['other']['ge2_days']['share'])} ({kn(b['other']['ge2_days'])})",
+        "Spearman r with heavy-rain days": f"{b['spearman_heavy_days']['r']:.2f} (p = {b['spearman_heavy_days']['p']:.3f})",
+    } for label, key in comparisons for b in [wa[key]]])
+    adv = wa["advisory_days_mean"]
+    with c2:
+        st.dataframe(ctable, hide_index=True, width="stretch")
+        st.markdown(
+            f"Flood Advisory days (minor flooding such as ponded roads), {adv['seasons']}: "
+            f"{adv['el_nino']['mean_days']:.1f} per winter after El Niño falls vs {adv['other']['mean_days']:.1f} after other "
+            f"falls. Over full July–June seasons {pct(wa['may_sep_share_of_warning_days'])} of warning days fall in May–Sep, "
+            "outside the storm season.\n\n**Caveats**\n"
+            + "\n".join(f"* {c[0].upper() + c[1:]}." for c in wa["caveats"]))
+
+    st.subheader("4 · Downpour hours: at least 0.5 in of rain in one hour")
+    hrows = pd.DataFrame(hr["season_rows"])
+    used = hrows[hrows["used"]].reset_index(drop=True)
+    used["phase"] = used["aso_oni"].map(fall_phase)
+    seasons_used = hr["seasons_used"]
+    left_out = ", ".join(f"{k} ({pct(v)} of hours reported)" for k, v in hr["seasons_left_out"].items())
+    st.markdown(
+        "Daily totals hide how fast the rain falls, and flash floods follow the fast part. From the hourly reports of the "
+        "Downtown USC weather station (CQT) we count the Oct–Apr hours with at least 0.5 in of rain. That rate is the usual "
+        "Southern California rule of thumb for when slopes burned by wildfire start to send down debris flows (fast-moving mud "
+        f"and rock). The station's hourly archive ends on {day_label(src['hourly']['last_report_pst'])}, so this covers the "
+        f"{len(seasons_used)} winters {seasons_used[0]} to {seasons_used[-1]} with at least 90% of Oct–Apr hours reported"
+        + (f"; left out: {left_out}." if left_out else "."))
+    hen, hot = hr["el_nino"], hr["other"]
+    c1, c2, c3 = st.columns(3)
+    c1.metric("Downpour hours per Oct–Apr", f"{hen['mean_intense_hours']:.1f} vs {hot['mean_intense_hours']:.1f}",
+              f"El Niño vs other falls · n = {hen['n']}, {hot['n']} · ×{hr['ratio_of_means']:.1f}",
+              delta_color="off", delta_arrow="off", border=True)
+    c2.metric("Winters with at least one downpour hour", f"{pct(hen['ge1_intense_hour']['share'])} vs {pct(hot['ge1_intense_hour']['share'])}",
+              f"{kn(hen['ge1_intense_hour'])} vs {kn(hot['ge1_intense_hour'])}", delta_color="off", delta_arrow="off", border=True)
+    c3.metric("Median wettest hour of the winter", f"{hen['median_max_1h_in']:.2f} vs {hot['median_max_1h_in']:.2f} in",
+              f"{hen['total_intense_hours']} vs {hot['total_intense_hours']} downpour hours in all", delta_color="off",
+              delta_arrow="off", border=True)
+    c1, c2 = st.columns([2.4, 1])
+    c1.markdown('<p class="small-label">Downpour hours per winter · number above each bar: wettest hour (in)</p>',
+                unsafe_allow_html=True)
+    c2.markdown('<p class="small-label">By fall phase</p>', unsafe_allow_html=True)
+    fig = go.Figure()
+    for p in PHASES:
+        sub = used[used["phase"] == p]
+        fig.add_bar(x=sub.index, y=sub["intense_hours_oct_apr"], name=f"{p} fall", marker_color=PHASE_COLORS[p],
+                    marker_line_width=0, text=sub["max_1h_oct_apr_in"].map("{:.2f}".format), textposition="outside",
+                    textfont=dict(family=MONO, size=10, color=MUTED), cliponaxis=False,
+                    customdata=np.stack([sub["winter"], sub["aso_oni"].map("{:+.2f}".format)], axis=1),
+                    hovertemplate="%{customdata[0]} (fall ONI %{customdata[1]}): %{y} downpour hours, wettest hour "
+                                  "%{text} in<extra></extra>")
+    fig.update_layout(bargap=0.2, yaxis=dict(title_text="Oct–Apr hours with ≥ 0.5 in", range=[0, used["intense_hours_oct_apr"].max() + 1]),
+                      xaxis=dict(tickvals=list(used.index), ticktext=list(used["winter"]), tickangle=-45))
+    with c1:
+        show(style(fig, 380))
+    by_winter = used.set_index("winter")["intense_hours_oct_apr"]
+    rng = np.random.default_rng(212)
+    fig = go.Figure()
+    for i, (group, label, color) in enumerate([(hen, "El Niño falls", WARM), (hot, "Other falls", GREY)]):
+        vals = by_winter.reindex(group["seasons"])
+        fig.add_scatter(x=i + rng.uniform(-0.15, 0.15, len(vals)), y=vals.values, mode="markers", name=label,
+                        marker=dict(color=color, size=10, line=dict(color=INK, width=0.5)), customdata=vals.index,
+                        hovertemplate="%{customdata}: %{y} downpour hours<extra></extra>")
+        fig.add_shape(type="line", x0=i - 0.3, x1=i + 0.3, y0=group["mean_intense_hours"], y1=group["mean_intense_hours"],
+                      line=dict(color=INK, width=2.5))
+        fig.add_annotation(x=i + 0.3, y=group["mean_intense_hours"], text=f"mean {group['mean_intense_hours']:.1f}",
+                           xanchor="left", showarrow=False, font=dict(size=11, color=INK))
+    fig.update_layout(xaxis=dict(tickvals=[0, 1], ticktext=[f"El Niño falls<br>n = {hen['n']}", f"Other falls<br>n = {hot['n']}"],
+                                 range=[-0.6, 1.8]),
+                      yaxis_title="Downpour hours per Oct–Apr")
+    with c2:
+        show(style(fig, 380, legend=False))
+    st.caption(f"Clock hours in Pacific standard time; only routine hourly reports. Over Oct–Apr the hourly amounts add up to the "
+               f"daily record of the same station (median ratio {hr['hourly_vs_daily_oct_apr_ratio_median']:.2f}).")
+
+    st.subheader(f"5 · This winter: {now['winter']}")
+    sr, sw = fw["so_far_rain"], fw["so_far_warnings"]
+    lo_d, hi_d = fw["heavy_days_range_in_tier"]
+    c1, c2, c3 = st.columns(3)
+    tier_name, _, tier_range = fw["tier"].partition(" (")
+    c1.metric("Risk tier", tier_name, f"ONI {tier_range.rstrip(')')} · this fall {fw['aso_oni']:+.2f}", delta_color="off", delta_arrow="off",
+              border=True)
+    c2.metric("Chance of a storm-heavy winter", pct(lp["p"]), f"95% interval {ci_text(lp['ci95'])} (logistic curve)",
+              delta_color="off", delta_arrow="off", border=True)
+    c3.metric("Expected heavy-rain days", f"{fw['expected_heavy_days_tier_mean']:g}",
+              f"{tier_name} mean, range {lo_d}–{hi_d}",
+              delta_color="off", delta_arrow="off", border=True)
+    c1, c2, c3 = st.columns(3)
+    c1.metric(f"Rain since 1 Jul, to {day_label(sr['through'])}", f"{sr['inches']:.2f} in",
+              f"{sr['heavy_days']} heavy-rain days · {sr['storms']} storms",
+              delta_color="off", delta_arrow="off", border=True)
+    c2.metric(f"Flood-warning days, to {day_label(sw['through'])}", f"{sw['warning_days_oct_apr']}",
+              f"{sw['flash_flood_warnings']} Flash Flood Warnings · {sw['advisory_days']} advisory days",
+              delta_color="off", delta_arrow="off", border=True)
+    with c3.container(border=True):
+        st.markdown('<p class="small-label">Past winters in this tier</p>', unsafe_allow_html=True)
+        st.markdown(" · ".join(f"{k}: {v} heavy-rain days" for k, v in fw["tier_seasons"].items()))
+    to = fw["tier_odds"]
+    st.markdown(
+        f"In the {len(fw['tier_seasons'])} past winters of this tier: ≥ 2 heavy-rain days in {kn(to['heavy2'])}, ≥ 3 in "
+        f"{kn(to['heavy3'])}, ≥ 6 (storm-heavy) in {kn(to['heavy6'])} ({pct(to['heavy6']['share'])}, 95% interval "
+        f"{ci_text(to['heavy6']['ci95'])}) and a storm of 3 in or more in {kn(to['major_storm'])}. With so few cases those "
+        f"intervals are wide; the logistic curve uses all {th['seasons']} seasons and is the steadier number "
+        f"({pct(lp['p'])}, {ci_text(lp['ci95'])}). Over all El Niño falls the mean is "
+        f"{fw['expected_heavy_days_all_el_nino_falls']:g} heavy-rain days per season. So far this season: "
+        f"{sr['storms']} storms, {sr['major_storms']} of them 3 in or more (to {day_label(sr['through'])}).\n\n"
+        f"**Burn scars.** {fw['burn_scar_note']}")
+    st.caption("A seasonal risk outlook, not a forecast of particular storms.")
+
+    st.subheader("Sources")
+    st.markdown(
+        "* **NWS warnings and advisories for Los Angeles County (CAC037)**, Iowa Environmental Mesonet (IEM) VTEC archive: "
+        f"<{src['warnings']['url'].split('&edate')[0]}>. "
+        f"{src['warnings']['archive_note']}.\n"
+        "* **Hourly reports, Los Angeles Downtown/USC (CQT)**, IEM ASOS archive: "
+        f"<{src['hourly']['url'].split(' (')[0]}>, {day_label(src['hourly']['first_report_pst'])} to "
+        f"{day_label(src['hourly']['last_report_pst'])}.\n"
+        "* **NOAA NCEI GHCN-Daily, station USW00093134** (Los Angeles Downtown, USC), daily precipitation: "
+        f"<{src['daily_rain']}>\n"
+        "* **NOAA Climate Prediction Center, Oceanic Niño Index (ONI)**: <https://www.cpc.ncep.noaa.gov/data/indices/oni.ascii.txt>\n"
+        f"* Buoy equivalent of the tipping point: {src['buoys']}.")
