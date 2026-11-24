@@ -1,0 +1,1476 @@
+{
+  "definitions": {
+    "season": "Jul 1 - Jun 30, named by its start year; tier = Aug-Oct (ASO) ONI of the start year",
+    "heavy_day": ">= 1.00 in (25.4 mm) at Los Angeles Downtown (USC), GHCN-Daily USW00093134",
+    "very_heavy_day": ">= 2.00 in",
+    "storm": "run of consecutive days each >= 0.10 in; total over the run; season of its first day",
+    "major_storm": "storm total >= 3.00 in (storms >= 2.00 in also counted)",
+    "max_3day": "largest 3-day rolling total in the season",
+    "tiers": "La Nina <= -0.5; Neutral; Moderate El Nino 0.5-1.49; Strong El Nino >= 1.5 (ASO ONI)",
+    "storm_heavy_season": ">= 6 heavy-rain days",
+    "threshold": "logistic regression of 1{heavy days >= 6} on ASO ONI; ONI where P = 0.5; 95 % CI from 2000 season-bootstrap resamples (percentiles; resamples with slope <= 0 have no threshold and count as +inf)",
+    "flood_warning_day": "local (America/Los_Angeles) date with >= 1 NWS FF.W, FA.W or FL.W in effect for Los Angeles County (CAC037), issue to expiry; headline count Oct-Apr, second count Jul-Jun",
+    "advisory_day": "local date with >= 1 Flood Advisory (FA.Y) in effect",
+    "intense_hour": ">= 0.50 in in one routine hourly report at Downtown USC (CQT); clock hour in PST (UTC-8); counted in Oct-Apr (Jul-Jun count kept as a second field)",
+    "hourly_season_rule": "season used if >= 90 % of its Oct-Apr hours have a routine report; blank rain field in an existing report = no rain"
+  },
+  "sources": {
+    "daily_rain": "https://www.ncei.noaa.gov/data/global-historical-climatology-network-daily/access/USW00093134.csv",
+    "warnings": {
+      "url": "https://mesonet.agron.iastate.edu/json/vtec_events_byugc.php?ugc=CAC037&sdate=1995-01-01&edate=<download date>",
+      "file": "data/raw/iem_vtec_events_CAC037.json",
+      "generated_at": "2026-11-23T20:39:21Z",
+      "archive_note": "IEM: Flash Flood Warning archive complete from about 2002; most other warning types from 2005-2008 (mesonet.agron.iastate.edu/info/datasets/vtec.html)"
+    },
+    "hourly": {
+      "url": "https://mesonet.agron.iastate.edu/cgi-bin/request/asos.py?station=CQT&data=p01i&report_type=3 (one calendar year per request)",
+      "files": "data/raw/iem_asos_cqt/CQT_p01i_<year>.csv",
+      "first_report_pst": "1999-06-30 23:52",
+      "last_report_pst": "2024-05-20 06:47"
+    },
+    "buoys": "Nino 3.4-box monthly buoy SST anomaly from section 9 (UCI to Jun 1998, NOAA PMEL GTMBA after)"
+  },
+  "season_measures_mean": {
+    "heavy": 4.26,
+    "very_heavy": 1.01,
+    "storms": 13.41,
+    "storms_2in": 1.92,
+    "major_storms": 0.93,
+    "max_storm_in": 3.76,
+    "max_3day_in": 3.36
+  },
+  "tiers": {
+    "La Niña": {
+      "n": 18,
+      "heavy_mean": 3.11,
+      "very_heavy_mean": 0.78,
+      "storms_2in_mean": 1.22,
+      "major_storms_mean": 0.83,
+      "max_3day_median_in": 3.59,
+      "p_heavy2": {
+        "k": 13,
+        "n": 18,
+        "share": 0.72,
+        "ci95": [
+          0.49,
+          0.88
+        ]
+      },
+      "p_heavy3": {
+        "k": 10,
+        "n": 18,
+        "share": 0.56,
+        "ci95": [
+          0.34,
+          0.75
+        ]
+      },
+      "p_heavy6": {
+        "k": 1,
+        "n": 18,
+        "share": 0.06,
+        "ci95": [
+          0.01,
+          0.26
+        ]
+      },
+      "p_major_storm": {
+        "k": 11,
+        "n": 18,
+        "share": 0.61,
+        "ci95": [
+          0.39,
+          0.8
+        ]
+      }
+    },
+    "Neutral": {
+      "n": 38,
+      "heavy_mean": 4.05,
+      "very_heavy_mean": 0.95,
+      "storms_2in_mean": 1.82,
+      "major_storms_mean": 0.92,
+      "max_3day_median_in": 2.71,
+      "p_heavy2": {
+        "k": 29,
+        "n": 38,
+        "share": 0.76,
+        "ci95": [
+          0.61,
+          0.87
+        ]
+      },
+      "p_heavy3": {
+        "k": 21,
+        "n": 38,
+        "share": 0.55,
+        "ci95": [
+          0.4,
+          0.7
+        ]
+      },
+      "p_heavy6": {
+        "k": 12,
+        "n": 38,
+        "share": 0.32,
+        "ci95": [
+          0.19,
+          0.47
+        ]
+      },
+      "p_major_storm": {
+        "k": 16,
+        "n": 38,
+        "share": 0.42,
+        "ci95": [
+          0.28,
+          0.58
+        ]
+      }
+    },
+    "Moderate El Niño (0.5–1.49)": {
+      "n": 16,
+      "heavy_mean": 5.44,
+      "very_heavy_mean": 1.19,
+      "storms_2in_mean": 2.56,
+      "major_storms_mean": 0.94,
+      "max_3day_median_in": 2.83,
+      "p_heavy2": {
+        "k": 14,
+        "n": 16,
+        "share": 0.88,
+        "ci95": [
+          0.64,
+          0.97
+        ]
+      },
+      "p_heavy3": {
+        "k": 12,
+        "n": 16,
+        "share": 0.75,
+        "ci95": [
+          0.51,
+          0.9
+        ]
+      },
+      "p_heavy6": {
+        "k": 7,
+        "n": 16,
+        "share": 0.44,
+        "ci95": [
+          0.23,
+          0.67
+        ]
+      },
+      "p_major_storm": {
+        "k": 8,
+        "n": 16,
+        "share": 0.5,
+        "ci95": [
+          0.28,
+          0.72
+        ]
+      }
+    },
+    "Strong El Niño (≥ 1.5)": {
+      "n": 4,
+      "heavy_mean": 6.75,
+      "very_heavy_mean": 2.0,
+      "storms_2in_mean": 3.5,
+      "major_storms_mean": 1.5,
+      "max_3day_median_in": 4.16,
+      "p_heavy2": {
+        "k": 4,
+        "n": 4,
+        "share": 1.0,
+        "ci95": [
+          0.51,
+          1.0
+        ]
+      },
+      "p_heavy3": {
+        "k": 3,
+        "n": 4,
+        "share": 0.75,
+        "ci95": [
+          0.3,
+          0.95
+        ]
+      },
+      "p_heavy6": {
+        "k": 3,
+        "n": 4,
+        "share": 0.75,
+        "ci95": [
+          0.3,
+          0.95
+        ]
+      },
+      "p_major_storm": {
+        "k": 3,
+        "n": 4,
+        "share": 0.75,
+        "ci95": [
+          0.3,
+          0.95
+        ]
+      }
+    },
+    "All seasons": {
+      "n": 76,
+      "heavy_mean": 4.26,
+      "very_heavy_mean": 1.01,
+      "storms_2in_mean": 1.92,
+      "major_storms_mean": 0.93,
+      "max_3day_median_in": 2.88,
+      "p_heavy2": {
+        "k": 60,
+        "n": 76,
+        "share": 0.79,
+        "ci95": [
+          0.69,
+          0.87
+        ]
+      },
+      "p_heavy3": {
+        "k": 46,
+        "n": 76,
+        "share": 0.61,
+        "ci95": [
+          0.49,
+          0.71
+        ]
+      },
+      "p_heavy6": {
+        "k": 23,
+        "n": 76,
+        "share": 0.3,
+        "ci95": [
+          0.21,
+          0.41
+        ]
+      },
+      "p_major_storm": {
+        "k": 38,
+        "n": 76,
+        "share": 0.5,
+        "ci95": [
+          0.39,
+          0.61
+        ]
+      }
+    }
+  },
+  "threshold": {
+    "outcome": ">= 6 heavy-rain days in the season",
+    "seasons": 76,
+    "hits": 23,
+    "base_rate": 0.303,
+    "logit": {
+      "intercept": -0.979,
+      "slope_per_degc": 1.145
+    },
+    "oni_p50": 0.86,
+    "oni_p50_ci95": [
+      0.35,
+      2.0
+    ],
+    "slope_not_positive_share": 0.0,
+    "p_at_oni": {
+      "0.00": {
+        "p": 0.27,
+        "ci95": [
+          0.16,
+          0.39
+        ]
+      },
+      "1.00": {
+        "p": 0.54,
+        "ci95": [
+          0.35,
+          0.75
+        ]
+      },
+      "1.50": {
+        "p": 0.68,
+        "ci95": [
+          0.43,
+          0.89
+        ]
+      },
+      "2.00": {
+        "p": 0.79,
+        "ci95": [
+          0.5,
+          0.96
+        ]
+      },
+      "2.46": {
+        "p": 0.86,
+        "ci95": [
+          0.56,
+          0.98
+        ]
+      }
+    },
+    "buoy_equivalent": {
+      "years": 38,
+      "first_year": 1988,
+      "last_year": 2026,
+      "years_missing": [
+        2014
+      ],
+      "r": 0.983,
+      "fit": {
+        "aso_oni_intercept": 0.093,
+        "slope": 0.914,
+        "residual_sd_c": 0.17
+      },
+      "oni_p50_as_buoy_anom_c": 0.83,
+      "ci95_c": [
+        0.29,
+        2.09
+      ],
+      "aso_2026_buoy_anom_c": 2.44
+    },
+    "secondary_heavy3": {
+      "outcome": ">= 3 heavy-rain days in the season",
+      "seasons": 76,
+      "hits": 46,
+      "base_rate": 0.605,
+      "logit": {
+        "intercept": 0.429,
+        "slope_per_degc": 0.287
+      },
+      "oni_p50": -1.49,
+      "oni_p50_ci95": [
+        -17.34,
+        null
+      ],
+      "slope_not_positive_share": 0.165,
+      "p_at_oni": {
+        "0.00": {
+          "p": 0.61,
+          "ci95": [
+            0.5,
+            0.72
+          ]
+        },
+        "1.00": {
+          "p": 0.67,
+          "ci95": [
+            0.5,
+            0.82
+          ]
+        },
+        "1.50": {
+          "p": 0.7,
+          "ci95": [
+            0.47,
+            0.88
+          ]
+        },
+        "2.00": {
+          "p": 0.73,
+          "ci95": [
+            0.44,
+            0.92
+          ]
+        },
+        "2.46": {
+          "p": 0.76,
+          "ci95": [
+            0.41,
+            0.94
+          ]
+        }
+      },
+      "note": "a season with >= 3 heavy-rain days is already the norm (base rate above 0.5), so there is no ONI tipping point for this outcome"
+    }
+  },
+  "warnings": {
+    "headline_seasons": "2002–03 to 2025–26",
+    "may_sep_share_of_warning_days": 0.376,
+    "comparison_oct_apr": {
+      "el_nino": {
+        "n": 7,
+        "mean_days": 6.43,
+        "ge2_days": {
+          "k": 6,
+          "n": 7,
+          "share": 0.86,
+          "ci95": [
+            0.49,
+            0.97
+          ]
+        }
+      },
+      "other": {
+        "n": 17,
+        "mean_days": 3.82,
+        "ge2_days": {
+          "k": 11,
+          "n": 17,
+          "share": 0.65,
+          "ci95": [
+            0.41,
+            0.83
+          ]
+        }
+      },
+      "ratio_of_means": 1.68,
+      "spearman_heavy_days": {
+        "r": 0.49,
+        "p": 0.0156,
+        "n": 24
+      }
+    },
+    "comparison_jul_jun": {
+      "el_nino": {
+        "n": 7,
+        "mean_days": 8.71,
+        "ge2_days": {
+          "k": 6,
+          "n": 7,
+          "share": 0.86,
+          "ci95": [
+            0.49,
+            0.97
+          ]
+        }
+      },
+      "other": {
+        "n": 17,
+        "mean_days": 6.47,
+        "ge2_days": {
+          "k": 15,
+          "n": 17,
+          "share": 0.88,
+          "ci95": [
+            0.66,
+            0.97
+          ]
+        }
+      },
+      "ratio_of_means": 1.35,
+      "spearman_heavy_days": {
+        "r": 0.27,
+        "p": 0.2085,
+        "n": 24
+      }
+    },
+    "sensitivity_1995_on_oct_apr": {
+      "el_nino": {
+        "n": 8,
+        "mean_days": 6.5,
+        "ge2_days": {
+          "k": 7,
+          "n": 8,
+          "share": 0.88,
+          "ci95": [
+            0.53,
+            0.98
+          ]
+        }
+      },
+      "other": {
+        "n": 23,
+        "mean_days": 3.09,
+        "ge2_days": {
+          "k": 13,
+          "n": 23,
+          "share": 0.57,
+          "ci95": [
+            0.37,
+            0.74
+          ]
+        }
+      },
+      "ratio_of_means": 2.11,
+      "spearman_heavy_days": {
+        "r": 0.48,
+        "p": 0.0061,
+        "n": 31
+      }
+    },
+    "sensitivity_no_burn_scar_oct_apr": {
+      "el_nino": {
+        "n": 6,
+        "mean_days": 6.0,
+        "ge2_days": {
+          "k": 5,
+          "n": 6,
+          "share": 0.83,
+          "ci95": [
+            0.44,
+            0.97
+          ]
+        }
+      },
+      "other": {
+        "n": 14,
+        "mean_days": 3.64,
+        "ge2_days": {
+          "k": 9,
+          "n": 14,
+          "share": 0.64,
+          "ci95": [
+            0.39,
+            0.84
+          ]
+        }
+      },
+      "ratio_of_means": 1.65,
+      "spearman_heavy_days": {
+        "r": 0.39,
+        "p": 0.093,
+        "n": 20
+      }
+    },
+    "advisory_days_mean": {
+      "seasons": "2009–10 to 2025–26",
+      "el_nino": {
+        "n": 4,
+        "mean_days": 22.25
+      },
+      "other": {
+        "n": 13,
+        "mean_days": 13.08
+      }
+    },
+    "burn_scar_seasons": {
+      "2009–10": "Station Fire (Aug 2009)",
+      "2020–21": "Bobcat Fire (Sep 2020)",
+      "2024–25": "Palisades and Eaton fires (Jan 2025)",
+      "2025–26": "Palisades and Eaton burn scars, 2nd winter"
+    },
+    "caveats": [
+      "warning counts also depend on burn scars and on warning practice (storm-based polygons from late 2007, Flood Advisories from 2009)",
+      "IEM's Flash Flood Warning archive is complete from about 2002; 1995-96 to 2001-02 are flagged partial_archive",
+      "summer thunderstorms and tropical remnants (e.g. Hilary, Aug 2023) fall outside Oct-Apr"
+    ],
+    "season_rows": [
+      {
+        "season": 1995,
+        "winter": "1995–96",
+        "aso_oni": -0.81,
+        "el_nino_fall": false,
+        "heavy_days": 3,
+        "warning_days_oct_apr": 0,
+        "warning_days_jul_jun": 0,
+        "flash_flood_warnings": 0,
+        "advisory_days": null,
+        "burn_scar": null,
+        "partial_archive": true,
+        "in_progress": false
+      },
+      {
+        "season": 1996,
+        "winter": "1996–97",
+        "aso_oni": -0.3,
+        "el_nino_fall": false,
+        "heavy_days": 5,
+        "warning_days_oct_apr": 0,
+        "warning_days_jul_jun": 0,
+        "flash_flood_warnings": 0,
+        "advisory_days": null,
+        "burn_scar": null,
+        "partial_archive": true,
+        "in_progress": false
+      },
+      {
+        "season": 1997,
+        "winter": "1997–98",
+        "aso_oni": 2.04,
+        "el_nino_fall": true,
+        "heavy_days": 11,
+        "warning_days_oct_apr": 7,
+        "warning_days_jul_jun": 11,
+        "flash_flood_warnings": 25,
+        "advisory_days": null,
+        "burn_scar": null,
+        "partial_archive": true,
+        "in_progress": false
+      },
+      {
+        "season": 1998,
+        "winter": "1998–99",
+        "aso_oni": -1.02,
+        "el_nino_fall": false,
+        "heavy_days": 1,
+        "warning_days_oct_apr": 0,
+        "warning_days_jul_jun": 5,
+        "flash_flood_warnings": 8,
+        "advisory_days": null,
+        "burn_scar": null,
+        "partial_archive": true,
+        "in_progress": false
+      },
+      {
+        "season": 1999,
+        "winter": "1999–00",
+        "aso_oni": -1.0,
+        "el_nino_fall": false,
+        "heavy_days": 4,
+        "warning_days_oct_apr": 3,
+        "warning_days_jul_jun": 6,
+        "flash_flood_warnings": 14,
+        "advisory_days": null,
+        "burn_scar": null,
+        "partial_archive": true,
+        "in_progress": false
+      },
+      {
+        "season": 2000,
+        "winter": "2000–01",
+        "aso_oni": -0.42,
+        "el_nino_fall": false,
+        "heavy_days": 5,
+        "warning_days_oct_apr": 3,
+        "warning_days_jul_jun": 3,
+        "flash_flood_warnings": 3,
+        "advisory_days": null,
+        "burn_scar": null,
+        "partial_archive": true,
+        "in_progress": false
+      },
+      {
+        "season": 2001,
+        "winter": "2001–02",
+        "aso_oni": -0.15,
+        "el_nino_fall": false,
+        "heavy_days": 0,
+        "warning_days_oct_apr": 0,
+        "warning_days_jul_jun": 1,
+        "flash_flood_warnings": 2,
+        "advisory_days": null,
+        "burn_scar": null,
+        "partial_archive": true,
+        "in_progress": false
+      },
+      {
+        "season": 2002,
+        "winter": "2002–03",
+        "aso_oni": 0.78,
+        "el_nino_fall": true,
+        "heavy_days": 4,
+        "warning_days_oct_apr": 0,
+        "warning_days_jul_jun": 0,
+        "flash_flood_warnings": 0,
+        "advisory_days": null,
+        "burn_scar": null,
+        "partial_archive": false,
+        "in_progress": false
+      },
+      {
+        "season": 2003,
+        "winter": "2003–04",
+        "aso_oni": 0.23,
+        "el_nino_fall": false,
+        "heavy_days": 1,
+        "warning_days_oct_apr": 4,
+        "warning_days_jul_jun": 7,
+        "flash_flood_warnings": 15,
+        "advisory_days": null,
+        "burn_scar": null,
+        "partial_archive": false,
+        "in_progress": false
+      },
+      {
+        "season": 2004,
+        "winter": "2004–05",
+        "aso_oni": 0.58,
+        "el_nino_fall": true,
+        "heavy_days": 14,
+        "warning_days_oct_apr": 14,
+        "warning_days_jul_jun": 15,
+        "flash_flood_warnings": 32,
+        "advisory_days": null,
+        "burn_scar": null,
+        "partial_archive": false,
+        "in_progress": false
+      },
+      {
+        "season": 2005,
+        "winter": "2005–06",
+        "aso_oni": -0.11,
+        "el_nino_fall": false,
+        "heavy_days": 4,
+        "warning_days_oct_apr": 6,
+        "warning_days_jul_jun": 10,
+        "flash_flood_warnings": 18,
+        "advisory_days": null,
+        "burn_scar": null,
+        "partial_archive": false,
+        "in_progress": false
+      },
+      {
+        "season": 2006,
+        "winter": "2006–07",
+        "aso_oni": 0.54,
+        "el_nino_fall": true,
+        "heavy_days": 0,
+        "warning_days_oct_apr": 3,
+        "warning_days_jul_jun": 8,
+        "flash_flood_warnings": 10,
+        "advisory_days": null,
+        "burn_scar": null,
+        "partial_archive": false,
+        "in_progress": false
+      },
+      {
+        "season": 2007,
+        "winter": "2007–08",
+        "aso_oni": -1.05,
+        "el_nino_fall": false,
+        "heavy_days": 3,
+        "warning_days_oct_apr": 6,
+        "warning_days_jul_jun": 12,
+        "flash_flood_warnings": 24,
+        "advisory_days": null,
+        "burn_scar": null,
+        "partial_archive": false,
+        "in_progress": false
+      },
+      {
+        "season": 2008,
+        "winter": "2008–09",
+        "aso_oni": -0.25,
+        "el_nino_fall": false,
+        "heavy_days": 3,
+        "warning_days_oct_apr": 6,
+        "warning_days_jul_jun": 8,
+        "flash_flood_warnings": 21,
+        "advisory_days": null,
+        "burn_scar": null,
+        "partial_archive": false,
+        "in_progress": false
+      },
+      {
+        "season": 2009,
+        "winter": "2009–10",
+        "aso_oni": 0.66,
+        "el_nino_fall": true,
+        "heavy_days": 4,
+        "warning_days_oct_apr": 9,
+        "warning_days_jul_jun": 9,
+        "flash_flood_warnings": 19,
+        "advisory_days": 20,
+        "burn_scar": "Station Fire (Aug 2009)",
+        "partial_archive": false,
+        "in_progress": false
+      },
+      {
+        "season": 2010,
+        "winter": "2010–11",
+        "aso_oni": -1.43,
+        "el_nino_fall": false,
+        "heavy_days": 5,
+        "warning_days_oct_apr": 3,
+        "warning_days_jul_jun": 5,
+        "flash_flood_warnings": 10,
+        "advisory_days": 20,
+        "burn_scar": null,
+        "partial_archive": false,
+        "in_progress": false
+      },
+      {
+        "season": 2011,
+        "winter": "2011–12",
+        "aso_oni": -0.76,
+        "el_nino_fall": false,
+        "heavy_days": 1,
+        "warning_days_oct_apr": 0,
+        "warning_days_jul_jun": 7,
+        "flash_flood_warnings": 13,
+        "advisory_days": 9,
+        "burn_scar": null,
+        "partial_archive": false,
+        "in_progress": false
+      },
+      {
+        "season": 2012,
+        "winter": "2012–13",
+        "aso_oni": 0.37,
+        "el_nino_fall": false,
+        "heavy_days": 0,
+        "warning_days_oct_apr": 1,
+        "warning_days_jul_jun": 4,
+        "flash_flood_warnings": 5,
+        "advisory_days": 2,
+        "burn_scar": null,
+        "partial_archive": false,
+        "in_progress": false
+      },
+      {
+        "season": 2013,
+        "winter": "2013–14",
+        "aso_oni": -0.32,
+        "el_nino_fall": false,
+        "heavy_days": 3,
+        "warning_days_oct_apr": 2,
+        "warning_days_jul_jun": 7,
+        "flash_flood_warnings": 11,
+        "advisory_days": 0,
+        "burn_scar": null,
+        "partial_archive": false,
+        "in_progress": false
+      },
+      {
+        "season": 2014,
+        "winter": "2014–15",
+        "aso_oni": 0.24,
+        "el_nino_fall": false,
+        "heavy_days": 2,
+        "warning_days_oct_apr": 8,
+        "warning_days_jul_jun": 10,
+        "flash_flood_warnings": 15,
+        "advisory_days": 1,
+        "burn_scar": null,
+        "partial_archive": false,
+        "in_progress": false
+      },
+      {
+        "season": 2015,
+        "winter": "2015–16",
+        "aso_oni": 2.02,
+        "el_nino_fall": true,
+        "heavy_days": 2,
+        "warning_days_oct_apr": 5,
+        "warning_days_jul_jun": 10,
+        "flash_flood_warnings": 25,
+        "advisory_days": 15,
+        "burn_scar": null,
+        "partial_archive": false,
+        "in_progress": false
+      },
+      {
+        "season": 2016,
+        "winter": "2016–17",
+        "aso_oni": -0.42,
+        "el_nino_fall": false,
+        "heavy_days": 6,
+        "warning_days_oct_apr": 10,
+        "warning_days_jul_jun": 10,
+        "flash_flood_warnings": 12,
+        "advisory_days": 21,
+        "burn_scar": null,
+        "partial_archive": false,
+        "in_progress": false
+      },
+      {
+        "season": 2017,
+        "winter": "2017–18",
+        "aso_oni": -0.23,
+        "el_nino_fall": false,
+        "heavy_days": 1,
+        "warning_days_oct_apr": 0,
+        "warning_days_jul_jun": 3,
+        "flash_flood_warnings": 4,
+        "advisory_days": 10,
+        "burn_scar": null,
+        "partial_archive": false,
+        "in_progress": false
+      },
+      {
+        "season": 2018,
+        "winter": "2018–19",
+        "aso_oni": 0.52,
+        "el_nino_fall": true,
+        "heavy_days": 6,
+        "warning_days_oct_apr": 4,
+        "warning_days_jul_jun": 6,
+        "flash_flood_warnings": 7,
+        "advisory_days": 27,
+        "burn_scar": null,
+        "partial_archive": false,
+        "in_progress": false
+      },
+      {
+        "season": 2019,
+        "winter": "2019–20",
+        "aso_oni": 0.31,
+        "el_nino_fall": false,
+        "heavy_days": 6,
+        "warning_days_oct_apr": 0,
+        "warning_days_jul_jun": 0,
+        "flash_flood_warnings": 0,
+        "advisory_days": 18,
+        "burn_scar": null,
+        "partial_archive": false,
+        "in_progress": false
+      },
+      {
+        "season": 2020,
+        "winter": "2020–21",
+        "aso_oni": -0.77,
+        "el_nino_fall": false,
+        "heavy_days": 1,
+        "warning_days_oct_apr": 0,
+        "warning_days_jul_jun": 3,
+        "flash_flood_warnings": 5,
+        "advisory_days": 5,
+        "burn_scar": "Bobcat Fire (Sep 2020)",
+        "partial_archive": false,
+        "in_progress": false
+      },
+      {
+        "season": 2021,
+        "winter": "2021–22",
+        "aso_oni": -0.64,
+        "el_nino_fall": false,
+        "heavy_days": 5,
+        "warning_days_oct_apr": 0,
+        "warning_days_jul_jun": 1,
+        "flash_flood_warnings": 1,
+        "advisory_days": 13,
+        "burn_scar": null,
+        "partial_archive": false,
+        "in_progress": false
+      },
+      {
+        "season": 2022,
+        "winter": "2022–23",
+        "aso_oni": -0.87,
+        "el_nino_fall": false,
+        "heavy_days": 11,
+        "warning_days_oct_apr": 5,
+        "warning_days_jul_jun": 6,
+        "flash_flood_warnings": 10,
+        "advisory_days": 33,
+        "burn_scar": null,
+        "partial_archive": false,
+        "in_progress": false
+      },
+      {
+        "season": 2023,
+        "winter": "2023–24",
+        "aso_oni": 1.5,
+        "el_nino_fall": true,
+        "heavy_days": 8,
+        "warning_days_oct_apr": 10,
+        "warning_days_jul_jun": 13,
+        "flash_flood_warnings": 26,
+        "advisory_days": 27,
+        "burn_scar": null,
+        "partial_archive": false,
+        "in_progress": false
+      },
+      {
+        "season": 2024,
+        "winter": "2024–25",
+        "aso_oni": -0.12,
+        "el_nino_fall": false,
+        "heavy_days": 2,
+        "warning_days_oct_apr": 4,
+        "warning_days_jul_jun": 5,
+        "flash_flood_warnings": 12,
+        "advisory_days": 11,
+        "burn_scar": "Palisades and Eaton fires (Jan 2025)",
+        "partial_archive": false,
+        "in_progress": false
+      },
+      {
+        "season": 2025,
+        "winter": "2025–26",
+        "aso_oni": -0.43,
+        "el_nino_fall": false,
+        "heavy_days": 7,
+        "warning_days_oct_apr": 10,
+        "warning_days_jul_jun": 12,
+        "flash_flood_warnings": 35,
+        "advisory_days": 27,
+        "burn_scar": "Palisades and Eaton burn scars, 2nd winter",
+        "partial_archive": false,
+        "in_progress": false
+      },
+      {
+        "season": 2026,
+        "winter": "2026–27",
+        "aso_oni": 2.46,
+        "el_nino_fall": true,
+        "heavy_days": null,
+        "warning_days_oct_apr": 2,
+        "warning_days_jul_jun": 2,
+        "flash_flood_warnings": 4,
+        "advisory_days": 8,
+        "burn_scar": null,
+        "partial_archive": false,
+        "in_progress": true
+      }
+    ]
+  },
+  "storms": {
+    "daily_largest": [
+      {
+        "start": "1980-02-13",
+        "days": 9,
+        "inches": 12.76
+      },
+      {
+        "start": "2024-02-03",
+        "days": 5,
+        "inches": 9.03
+      },
+      {
+        "start": "2005-02-17",
+        "days": 7,
+        "inches": 8.71
+      }
+    ],
+    "hourly": {
+      "station": "CQT (Los Angeles Downtown/USC)",
+      "seasons_used": [
+        "1999–00",
+        "2000–01",
+        "2001–02",
+        "2002–03",
+        "2003–04",
+        "2004–05",
+        "2005–06",
+        "2006–07",
+        "2007–08",
+        "2008–09",
+        "2009–10",
+        "2010–11",
+        "2011–12",
+        "2012–13",
+        "2013–14",
+        "2014–15",
+        "2015–16",
+        "2016–17",
+        "2017–18",
+        "2018–19",
+        "2019–20",
+        "2020–21",
+        "2022–23",
+        "2023–24"
+      ],
+      "seasons_left_out": {
+        "2021–22": 0.81
+      },
+      "hourly_vs_daily_oct_apr_ratio_median": 0.997,
+      "el_nino": {
+        "n": 7,
+        "seasons": [
+          "2002–03",
+          "2004–05",
+          "2006–07",
+          "2009–10",
+          "2015–16",
+          "2018–19",
+          "2023–24"
+        ],
+        "mean_intense_hours": 2.71,
+        "total_intense_hours": 19,
+        "ge1_intense_hour": {
+          "k": 6,
+          "n": 7,
+          "share": 0.86,
+          "ci95": [
+            0.49,
+            0.97
+          ]
+        },
+        "median_max_1h_in": 0.87,
+        "mean_intense_hours_jul_jun": 3.29
+      },
+      "other": {
+        "n": 17,
+        "seasons": [
+          "1999–00",
+          "2000–01",
+          "2001–02",
+          "2003–04",
+          "2005–06",
+          "2007–08",
+          "2008–09",
+          "2010–11",
+          "2011–12",
+          "2012–13",
+          "2013–14",
+          "2014–15",
+          "2016–17",
+          "2017–18",
+          "2019–20",
+          "2020–21",
+          "2022–23"
+        ],
+        "mean_intense_hours": 0.71,
+        "total_intense_hours": 12,
+        "ge1_intense_hour": {
+          "k": 9,
+          "n": 17,
+          "share": 0.53,
+          "ci95": [
+            0.31,
+            0.74
+          ]
+        },
+        "median_max_1h_in": 0.5,
+        "mean_intense_hours_jul_jun": 0.94
+      },
+      "ratio_of_means": 3.85,
+      "season_rows": [
+        {
+          "season": 1999,
+          "winter": "1999–00",
+          "aso_oni": -1.0,
+          "used": true,
+          "oct_apr_coverage": 0.962,
+          "intense_hours_oct_apr": 0,
+          "intense_hours_jul_jun": 0,
+          "max_1h_oct_apr_in": 0.47,
+          "hourly_vs_daily_oct_apr": 0.937
+        },
+        {
+          "season": 2000,
+          "winter": "2000–01",
+          "aso_oni": -0.42,
+          "used": true,
+          "oct_apr_coverage": 0.996,
+          "intense_hours_oct_apr": 2,
+          "intense_hours_jul_jun": 2,
+          "max_1h_oct_apr_in": 0.6,
+          "hourly_vs_daily_oct_apr": 0.993
+        },
+        {
+          "season": 2001,
+          "winter": "2001–02",
+          "aso_oni": -0.15,
+          "used": true,
+          "oct_apr_coverage": 0.999,
+          "intense_hours_oct_apr": 1,
+          "intense_hours_jul_jun": 1,
+          "max_1h_oct_apr_in": 0.51,
+          "hourly_vs_daily_oct_apr": 0.974
+        },
+        {
+          "season": 2002,
+          "winter": "2002–03",
+          "aso_oni": 0.78,
+          "used": true,
+          "oct_apr_coverage": 0.994,
+          "intense_hours_oct_apr": 4,
+          "intense_hours_jul_jun": 4,
+          "max_1h_oct_apr_in": 0.87,
+          "hourly_vs_daily_oct_apr": 1.004
+        },
+        {
+          "season": 2003,
+          "winter": "2003–04",
+          "aso_oni": 0.23,
+          "used": true,
+          "oct_apr_coverage": 0.997,
+          "intense_hours_oct_apr": 1,
+          "intense_hours_jul_jun": 1,
+          "max_1h_oct_apr_in": 0.59,
+          "hourly_vs_daily_oct_apr": 0.996
+        },
+        {
+          "season": 2004,
+          "winter": "2004–05",
+          "aso_oni": 0.58,
+          "used": true,
+          "oct_apr_coverage": 0.981,
+          "intense_hours_oct_apr": 6,
+          "intense_hours_jul_jun": 6,
+          "max_1h_oct_apr_in": 1.29,
+          "hourly_vs_daily_oct_apr": 0.996
+        },
+        {
+          "season": 2005,
+          "winter": "2005–06",
+          "aso_oni": -0.11,
+          "used": true,
+          "oct_apr_coverage": 0.996,
+          "intense_hours_oct_apr": 0,
+          "intense_hours_jul_jun": 1,
+          "max_1h_oct_apr_in": 0.46,
+          "hourly_vs_daily_oct_apr": 1.0
+        },
+        {
+          "season": 2006,
+          "winter": "2006–07",
+          "aso_oni": 0.54,
+          "used": true,
+          "oct_apr_coverage": 1.0,
+          "intense_hours_oct_apr": 1,
+          "intense_hours_jul_jun": 1,
+          "max_1h_oct_apr_in": 0.95,
+          "hourly_vs_daily_oct_apr": 1.292
+        },
+        {
+          "season": 2007,
+          "winter": "2007–08",
+          "aso_oni": -1.05,
+          "used": true,
+          "oct_apr_coverage": 0.995,
+          "intense_hours_oct_apr": 1,
+          "intense_hours_jul_jun": 1,
+          "max_1h_oct_apr_in": 0.51,
+          "hourly_vs_daily_oct_apr": 0.983
+        },
+        {
+          "season": 2008,
+          "winter": "2008–09",
+          "aso_oni": -0.25,
+          "used": true,
+          "oct_apr_coverage": 0.988,
+          "intense_hours_oct_apr": 2,
+          "intense_hours_jul_jun": 2,
+          "max_1h_oct_apr_in": 0.98,
+          "hourly_vs_daily_oct_apr": 1.218
+        },
+        {
+          "season": 2009,
+          "winter": "2009–10",
+          "aso_oni": 0.66,
+          "used": true,
+          "oct_apr_coverage": 1.0,
+          "intense_hours_oct_apr": 3,
+          "intense_hours_jul_jun": 5,
+          "max_1h_oct_apr_in": 0.98,
+          "hourly_vs_daily_oct_apr": 1.046
+        },
+        {
+          "season": 2010,
+          "winter": "2010–11",
+          "aso_oni": -1.43,
+          "used": true,
+          "oct_apr_coverage": 0.996,
+          "intense_hours_oct_apr": 2,
+          "intense_hours_jul_jun": 3,
+          "max_1h_oct_apr_in": 0.97,
+          "hourly_vs_daily_oct_apr": 1.098
+        },
+        {
+          "season": 2011,
+          "winter": "2011–12",
+          "aso_oni": -0.76,
+          "used": true,
+          "oct_apr_coverage": 0.999,
+          "intense_hours_oct_apr": 0,
+          "intense_hours_jul_jun": 0,
+          "max_1h_oct_apr_in": 0.34,
+          "hourly_vs_daily_oct_apr": 0.998
+        },
+        {
+          "season": 2012,
+          "winter": "2012–13",
+          "aso_oni": 0.37,
+          "used": true,
+          "oct_apr_coverage": 0.996,
+          "intense_hours_oct_apr": 0,
+          "intense_hours_jul_jun": 1,
+          "max_1h_oct_apr_in": 0.36,
+          "hourly_vs_daily_oct_apr": 1.074
+        },
+        {
+          "season": 2013,
+          "winter": "2013–14",
+          "aso_oni": -0.32,
+          "used": true,
+          "oct_apr_coverage": 1.0,
+          "intense_hours_oct_apr": 1,
+          "intense_hours_jul_jun": 1,
+          "max_1h_oct_apr_in": 0.56,
+          "hourly_vs_daily_oct_apr": 1.037
+        },
+        {
+          "season": 2014,
+          "winter": "2014–15",
+          "aso_oni": 0.24,
+          "used": true,
+          "oct_apr_coverage": 0.999,
+          "intense_hours_oct_apr": 0,
+          "intense_hours_jul_jun": 1,
+          "max_1h_oct_apr_in": 0.46,
+          "hourly_vs_daily_oct_apr": 0.985
+        },
+        {
+          "season": 2015,
+          "winter": "2015–16",
+          "aso_oni": 2.02,
+          "used": true,
+          "oct_apr_coverage": 1.0,
+          "intense_hours_oct_apr": 1,
+          "intense_hours_jul_jun": 3,
+          "max_1h_oct_apr_in": 0.51,
+          "hourly_vs_daily_oct_apr": 0.998
+        },
+        {
+          "season": 2016,
+          "winter": "2016–17",
+          "aso_oni": -0.42,
+          "used": true,
+          "oct_apr_coverage": 1.0,
+          "intense_hours_oct_apr": 1,
+          "intense_hours_jul_jun": 1,
+          "max_1h_oct_apr_in": 0.51,
+          "hourly_vs_daily_oct_apr": 0.997
+        },
+        {
+          "season": 2017,
+          "winter": "2017–18",
+          "aso_oni": -0.23,
+          "used": true,
+          "oct_apr_coverage": 0.987,
+          "intense_hours_oct_apr": 0,
+          "intense_hours_jul_jun": 0,
+          "max_1h_oct_apr_in": 0.37,
+          "hourly_vs_daily_oct_apr": 0.999
+        },
+        {
+          "season": 2018,
+          "winter": "2018–19",
+          "aso_oni": 0.52,
+          "used": true,
+          "oct_apr_coverage": 0.993,
+          "intense_hours_oct_apr": 0,
+          "intense_hours_jul_jun": 0,
+          "max_1h_oct_apr_in": 0.48,
+          "hourly_vs_daily_oct_apr": 0.995
+        },
+        {
+          "season": 2019,
+          "winter": "2019–20",
+          "aso_oni": 0.31,
+          "used": true,
+          "oct_apr_coverage": 0.989,
+          "intense_hours_oct_apr": 0,
+          "intense_hours_jul_jun": 0,
+          "max_1h_oct_apr_in": 0.47,
+          "hourly_vs_daily_oct_apr": 0.994
+        },
+        {
+          "season": 2020,
+          "winter": "2020–21",
+          "aso_oni": -0.77,
+          "used": true,
+          "oct_apr_coverage": 0.994,
+          "intense_hours_oct_apr": 0,
+          "intense_hours_jul_jun": 0,
+          "max_1h_oct_apr_in": 0.4,
+          "hourly_vs_daily_oct_apr": 0.975
+        },
+        {
+          "season": 2021,
+          "winter": "2021–22",
+          "aso_oni": -0.64,
+          "used": false,
+          "oct_apr_coverage": 0.812,
+          "intense_hours_oct_apr": 2,
+          "intense_hours_jul_jun": 2,
+          "max_1h_oct_apr_in": 0.51,
+          "hourly_vs_daily_oct_apr": 0.894
+        },
+        {
+          "season": 2022,
+          "winter": "2022–23",
+          "aso_oni": -0.87,
+          "used": true,
+          "oct_apr_coverage": 0.998,
+          "intense_hours_oct_apr": 1,
+          "intense_hours_jul_jun": 1,
+          "max_1h_oct_apr_in": 0.5,
+          "hourly_vs_daily_oct_apr": 0.995
+        },
+        {
+          "season": 2023,
+          "winter": "2023–24",
+          "aso_oni": 1.5,
+          "used": true,
+          "oct_apr_coverage": 0.997,
+          "intense_hours_oct_apr": 4,
+          "intense_hours_jul_jun": 4,
+          "max_1h_oct_apr_in": 0.56,
+          "hourly_vs_daily_oct_apr": 0.982
+        }
+      ]
+    }
+  },
+  "winter_2026_27": {
+    "aso_oni": 2.46,
+    "tier": "Strong El Niño (≥ 1.5)",
+    "tier_seasons": {
+      "1965–66": 6,
+      "1997–98": 11,
+      "2015–16": 2,
+      "2023–24": 8
+    },
+    "expected_heavy_days_tier_mean": 6.75,
+    "heavy_days_range_in_tier": [
+      2,
+      11
+    ],
+    "expected_heavy_days_all_el_nino_falls": 5.7,
+    "so_far_rain": {
+      "through": "2026-11-13",
+      "inches": 2.44,
+      "heavy_days": 0,
+      "storms": 4,
+      "major_storms": 0
+    },
+    "so_far_warnings": {
+      "through": "2026-11-23",
+      "warning_days_oct_apr": 2,
+      "warning_days_jul_jun": 2,
+      "flash_flood_warnings": 4,
+      "advisory_days": 8
+    },
+    "burn_scar_note": "2026–27 is the second full winter after the January 2025 Palisades and Eaton fires. In 2025–26 the county had 10 Oct–Apr flood-warning days and 35 Flash Flood Warnings with 7 heavy-rain days at USC; burned slopes still need less rain to flood, so warning counts this winter can run above what the rain alone would suggest.",
+    "tier_odds": {
+      "heavy2": {
+        "k": 4,
+        "n": 4,
+        "share": 1.0,
+        "ci95": [
+          0.51,
+          1.0
+        ]
+      },
+      "heavy3": {
+        "k": 3,
+        "n": 4,
+        "share": 0.75,
+        "ci95": [
+          0.3,
+          0.95
+        ]
+      },
+      "heavy6": {
+        "k": 3,
+        "n": 4,
+        "share": 0.75,
+        "ci95": [
+          0.3,
+          0.95
+        ]
+      },
+      "major_storm": {
+        "k": 3,
+        "n": 4,
+        "share": 0.75,
+        "ci95": [
+          0.3,
+          0.95
+        ]
+      }
+    },
+    "logistic_p_storm_heavy": {
+      "p": 0.86,
+      "ci95": [
+        0.56,
+        0.98
+      ]
+    },
+    "logistic_p_heavy3": {
+      "p": 0.76,
+      "ci95": [
+        0.41,
+        0.94
+      ]
+    }
+  }
+}
